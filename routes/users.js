@@ -28,11 +28,18 @@ router.post("/signin", function (req, res, next) {
   const email = req.body.email;
   const password = req.body.password;
 
-  const stmt = db.prepare("SELECT * FROM users WHERE email = ? AND password = ?");
-  const dbResult = stmt.get(email, password);
+  const stmt = db.prepare("SELECT * FROM users WHERE email = ?");
+  const dbResult = stmt.get(email);
+
   if (dbResult) {
+    const passwordHash = dbResult.password;
+    const compareResult = bcrypt.compareSync(password, passwordHash);
+
+    if (!compareResult) {
+      res.render("users/signin", { result: { invalid_credentials: true } });
+    }
+
     const token = getUserJwt(dbResult.id, dbResult.email, dbResult.name, dbResult.role);
-    console.log("NEW TOKEN", token);
     res.cookie("auth", token);
 
     res.render("users/signin", { result: { success: true } });
@@ -41,9 +48,7 @@ router.post("/signin", function (req, res, next) {
   }
 });
 
-
-
-// SCHEMA signup
+// SCHEMA signin
 const schema_signup = Joi.object({
   name: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().max(50).required(),
@@ -65,12 +70,16 @@ router.post("/signup", function (req, res, next) {
     return;
   }
 
-  const passwordHash = bcrypt.hashSync(req.body.password, 10)
+  const passwordHash = bcrypt.hashSync(req.body.password, 10);
 
-  console.log("DATA", req.body);
+  const stmt = db.prepare("INSERT INTO users (email, password, name, signed_at, role) VALUES (?, ?, ?, ?, ?);");
+  const insertResult = stmt.run(req.body.email, passwordHash, req.body.name, Date.now(), "user");
 
+  if (insertResult.changes && insertResult.changes === 1) {
+    res.render("users/signup", { result: { success: true } });
+  } else {
+    res.render("users/signup", { result: { database_error: true } });
+  }
 });
-
-
 
 module.exports = router;
