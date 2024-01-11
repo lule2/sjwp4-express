@@ -28,7 +28,7 @@ function checkAuthCookie(req, res, next) {
     try {
         result = jwt.verify(token, JWT_SECRET_KEY);
     } catch (error) {
-        console.log("ERROR", error);
+        throw new Error("Potrebna je prijava u sustav");
         next();
     }
 
