@@ -2,18 +2,90 @@ const express = require("express");
 const router = express.Router();
 const Joi = require("joi");
 const { db } = require("../services/db.js");
-const { getUserJwt } = require("../services/auth.js");
+const { getUserJwt, checkEmailUnique, authRequired } = require("../services/auth.js");
 const bcrypt = require("bcrypt");
 
-// GET /users/signout
-router.get("/signout", function (req, res, next) {
-  res.clearCookie(process.env.AUTH_COOKIE_KEY);
-  res.redirect("/");
+// GET /users/data
+router.get("/data", authRequired, function (req, res, next) {
+  res.render("users/data", { result: { display_form: true } });
 });
 
-// GET /users/data
-router.get("/data", function (req, res, next) {
-  res.render("users/data");
+const schema_data = Joi.object({
+  name: Joi.string().min(3).max(50).required(),
+  email: Joi.string().email().max(50).required(),
+  password: Joi.string().min(3).max(50).allow(null, "")
+});
+
+// POST /users/data
+router.post("/data", authRequired, function (req, res, next) {
+  // do validation
+  const result = schema_data.validate(req.body);
+  if (result.error) {
+    res.render("users/signin", { result: { validation_error: true, display_form: true } });
+    return;
+  }
+
+  const newName = req.body.name;
+  const newEmail = req.body.email;
+  const newPassword = req.body.password;
+  const currentUser = req.user;
+
+  let dataChanged = [];
+
+  let emailChanged = false;
+  if (newEmail !== currentUser.email) {
+    if (!checkEmailUnique(newEmail)) {
+      result.render("users/data", { result: { email_in_use: true, display_form: true } });
+      return;
+    }
+    emailChanged = true;
+    dataChanged.push(newEmail);
+  }
+  let nameChanged = false;
+  if (newName !== currentUser.name) {
+    nameChanged = true;
+    nameChanged.push(newName);
+  }
+
+  let passwordChanged = false;
+  let passwordHesh;
+  if (newPassword && newPassword.lenght > 0) {
+    passwordHash = bcrypt.hashSync(newPassword, 10);
+    passwordChanged = true;
+    passwordChanged.push(passwordHesh);
+  }
+
+  if (!emailChanged && !nameChanged && !passwordCghanged) {
+    res.render("users/data", { result: { display_form: true } });
+    return;
+  }
+
+  let query = "UPDATE users SET";
+  if (emailChanged) query += " email = ?,";
+  if (nameChanged) query += " name = ?,";
+  if (passwordChanged) query += " password = ?,";
+  query = query.slice(0, -1);
+  query += "WHERE email = ?;";
+  dataChanged.push(currentUser.email);
+
+  const stmt = db.prepare(query);
+  const updateResult = stmt.run(dataChanged);
+
+  if (updateResult.changes && updateResult.changes === 1){
+    res.render("users/data", { result: { success: false } });
+  } else {
+    res.render("users/data", { result: { database_error: true } });
+  }
+
+  console.log(query);
+  return;
+
+});
+
+// GET /users/signout
+router.get("/signout", authRequired, function (req, res, next) {
+  res.clearCookie(process.env.AUTH_COOKIE_KEY);
+  res.redirect("/");
 });
 
 // GET /users/signin
@@ -60,7 +132,7 @@ router.post("/signin", function (req, res, next) {
   }
 });
 
-// SCHEMA signin
+// SCHEMA signup
 const schema_signup = Joi.object({
   name: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().max(50).required(),
@@ -82,9 +154,7 @@ router.post("/signup", function (req, res, next) {
     return;
   }
 
-  const stmt1 = db.prepare("SELECT * FROM users WHERE email = ?;");
-  const selectResult = stmt1.get(req.body.email);
-  if (selectResult) {
+  if (!checkEmailUnique(req.body.email)) {
     res.render("users/signup", { result: { email_in_use: true, display_form: true } });
     return;
   }
