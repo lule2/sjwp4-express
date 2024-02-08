@@ -21,7 +21,7 @@ router.post("/data", authRequired, function (req, res, next) {
   // do validation
   const result = schema_data.validate(req.body);
   if (result.error) {
-    res.render("users/signin", { result: { validation_error: true, display_form: true } });
+    res.render("users/data", { result: { validation_error: true, display_form: true } });
     return;
   }
 
@@ -35,27 +35,28 @@ router.post("/data", authRequired, function (req, res, next) {
   let emailChanged = false;
   if (newEmail !== currentUser.email) {
     if (!checkEmailUnique(newEmail)) {
-      result.render("users/data", { result: { email_in_use: true, display_form: true } });
+      res.render("users/data", { result: { email_in_use: true, display_form: true } });
       return;
     }
     emailChanged = true;
     dataChanged.push(newEmail);
   }
+
   let nameChanged = false;
   if (newName !== currentUser.name) {
     nameChanged = true;
-    nameChanged.push(newName);
+    dataChanged.push(newName);
   }
 
   let passwordChanged = false;
-  let passwordHesh;
-  if (newPassword && newPassword.lenght > 0) {
+  let passwordHash;
+  if (newPassword && newPassword.length > 0) {
     passwordHash = bcrypt.hashSync(newPassword, 10);
     passwordChanged = true;
-    passwordChanged.push(passwordHesh);
+    dataChanged.push(passwordHash);
   }
 
-  if (!emailChanged && !nameChanged && !passwordCghanged) {
+  if (!emailChanged && !nameChanged && !passwordChanged) {
     res.render("users/data", { result: { display_form: true } });
     return;
   }
@@ -65,21 +66,17 @@ router.post("/data", authRequired, function (req, res, next) {
   if (nameChanged) query += " name = ?,";
   if (passwordChanged) query += " password = ?,";
   query = query.slice(0, -1);
-  query += "WHERE email = ?;";
+  query += " WHERE email = ?;";
   dataChanged.push(currentUser.email);
 
   const stmt = db.prepare(query);
   const updateResult = stmt.run(dataChanged);
 
-  if (updateResult.changes && updateResult.changes === 1){
-    res.render("users/data", { result: { success: false } });
+  if (updateResult.changes && updateResult.changes === 1) {
+    res.render("users/data", { result: { success: true } });
   } else {
     res.render("users/data", { result: { database_error: true } });
   }
-
-  console.log(query);
-  return;
-
 });
 
 // GET /users/signout
@@ -161,7 +158,7 @@ router.post("/signup", function (req, res, next) {
 
   const passwordHash = bcrypt.hashSync(req.body.password, 10);
   const stmt2 = db.prepare("INSERT INTO users (email, password, name, signed_at, role) VALUES (?, ?, ?, ?, ?);");
-  const insertResult = stmt2.run(req.body.email, passwordHash, req.body.name, Date.now(), "user");
+  const insertResult = stmt2.run(req.body.email, passwordHash, req.body.name, new Date().toISOString(), "user");
 
   if (insertResult.changes && insertResult.changes === 1) {
     res.render("users/signup", { result: { success: true } });
