@@ -1,6 +1,7 @@
 <div class="p-2">
     {{#if result.display_form}}
-    <form method="post" action="/competitions/{{#if result.edit}}edit{{/if}}{{#unless result.edit}}add{{/unless}}" class="flex flex-col gap-2">
+    <form method="post" action="/competitions/{{#if result.edit}}edit{{/if}}{{#unless result.edit}}add{{/unless}}"
+        class="flex flex-col gap-2">
         <div class="pb-2 flex flex-col">
             <label>Naziv</label>
             <input type="text" name="name" class="bg-neutral" required="" minlength="3" maxlength="50" {{#if
@@ -18,7 +19,7 @@
                 result.edit}}value="{{result.edit.apply_till}}" {{/if}} />
         </div>
         {{#if result.edit}}
-        <input type="hidden" name="id"value="{{result.edit.id}}" />
+        <input type="hidden" name="id" value="{{result.edit.id}}" />
         {{/if}}
         {{> form_buttons }}
     </form>

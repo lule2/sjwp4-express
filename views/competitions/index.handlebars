@@ -2,6 +2,7 @@
     {{#if user.is_admin }}
     <a href="/competitions/add" class="btn btn-primary">Novo natjecanje</a>
     {{/if}}
+
     <div class="overflow-x-auto">
         <table class="table">
             <!-- head -->
@@ -23,7 +24,7 @@
                     <td>{{this.name}}</td>
                     <td>
                         <div class="line-clamp-2">
-                        {{this.description}}
+                            {{this.description}}
                         </div>
                     </td>
                     <td x-data="{}">
@@ -31,8 +32,11 @@
                     </td>
                     <td>{{this.author}}</td>
                     <td class="flex flex-wrap gap-2">
+                        {{#if ../user.is_admin }}
                         <a href="/competitions/edit/{{this.id}}" class="btn btn-accent btn-xs">Uredi</a>
                         <a href="/competitions/delete/{{this.id}}" class="btn btn-error btn-xs">Briši</a>
+                        {{/if}}
+                        <a href="/competitions/signin/{{this.id}}" class="btn btn-accent btn-xs">Prijava</a>
                     </td>
                 </tr>
                 {{/each}}
