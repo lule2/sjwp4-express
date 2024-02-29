@@ -4,6 +4,22 @@ const { authRequired, adminRequired } = require("../services/auth.js");
 const Joi = require("joi");
 const { db } = require("../services/db.js");
 
+//GET competitions/application
+router.get("/application/:id", authRequired, function (req, res, next) {
+    //do validation
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+    const stmt = db.prepare(`
+    SELECT id_application, id_user, id_competition, points
+    FROM application
+    WHERE id_user = ? AND id_competition = ?
+    `);
+
+    res.render("competitions/application", { result: { items: result } });
+});
+
 // GET /competitions
 router.get("/", authRequired, function (req, res, next) {
     const stmt = db.prepare(`
