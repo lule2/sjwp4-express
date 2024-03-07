@@ -1,0 +1,28 @@
+<div class="overflow-x-auto">
+        <table class="table">
+            <!-- head -->
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ime</th>
+                    <th>Broj bodova</th>
+                    <th>Mogućnosti</th>
+                </tr>
+            </thead>
+            <!-- body -->
+            <tbody>
+                {{#each result.items}}
+                <tr>
+                    <th>{{this.id}}</th>
+                    <td>{{this.name}}</td>
+                    <td>{{this.points}}</td>
+                    <td class="flex flex-wrap gap-2">
+                        {{#if ../user.is_admin }}
+                        <a href="/competitions/results/formresults/{{this.id}}" class="btn btn-accent btn-xs">Upiši</a>
+                        {{/if}}
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
