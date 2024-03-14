@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 const { authRequired, adminRequired } = require("../services/auth.js");
@@ -39,7 +38,7 @@ router.get("/edit/:id", function (req, res, next) {
         throw new Error("Neispravan poziv");
     }
 
-    res.render("competitions/formresults", { result: { display_form: true, edit: selectResult } });
+    res.render("competitions/results", { result: { display_form: true, edit: selectResult } });
 });
 
 // SCHEMA result edit
@@ -55,17 +54,17 @@ router.post("/edit", function (req, res, next) {
     // do validation
     const result = schema_results.validate(req.body);
     if (result.error) {
-        res.render("competitions/results/formresults/", { result: { validation_error: true, display_form: true } });
+        res.render("competitions/results/", { result: { validation_error: true, display_form: true } });
         return;
     }
 
-    const stmt = db.prepare("UPDATE results SET points = ? WHERE id = ?;");
+    const stmt = db.prepare("UPDATE application SET points = ? WHERE id = ?;");
     const updateResult = stmt.run(req.body.name, req.body.description, req.body.apply_till, req.body.id);
 
     if (updateResult.changes && updateResult.changes === 1) {
         res.redirect("/results");
     } else {
-        res.render("competitions/results/formresults", { result: { database_error: true } });
+        res.render("competitions/results/", { result: { database_error: true } });
     }
 });
 
