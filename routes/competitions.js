@@ -4,6 +4,25 @@ const { authRequired, adminRequired } = require("../services/auth.js");
 const Joi = require("joi");
 const { db } = require("../services/db.js");
 
+// GET /competitions
+router.get("/", authRequired, function (req, res, next) {
+    const stmt = db.prepare(`
+        SELECT c.id, c.name, c.description, u.name AS author, c.apply_till
+        FROM competitions c, users u
+        WHERE c.author_id = u.id
+        ORDER BY c.apply_till
+    `);
+
+    const result = stmt.all();
+
+    res.render("competitions/index", { result: { items: result } });
+});
+
+// SCHEMA id
+const schema_id = Joi.object({
+    id: Joi.number().integer().positive().required()
+});
+
 //GET competitions/results
 router.get("/results/:id", function (req, res, next) {
     //do validation
@@ -23,113 +42,6 @@ router.get("/results/:id", function (req, res, next) {
     }
 });
 
-// GET /results/edit/:id
-router.get("/edit/:id", function (req, res, next) {
-    // do validation
-    const result = schema_id.validate(req.params);
-    if (result.error) {
-        throw new Error("Neispravan poziv");
-    }
-
-    const stmt = db.prepare("SELECT * FROM application WHERE id = ?;");
-    const selectResult = stmt.get(req.params.id);
-
-    if (!selectResult) {
-        throw new Error("Neispravan poziv");
-    }
-
-    res.render("competitions/results", { result: { display_form: true, edit: selectResult } });
-});
-
-// SCHEMA result edit
-const schema_results = Joi.object({
-    id: Joi.number().integer().positive().required(),
-    name: Joi.string().min(3).max(50).required(),
-    points: Joi.number().integer().positive().required()
-});
-
-
-// POST /competitions/results
-router.post("/edit", function (req, res, next) {
-    // do validation
-    const result = schema_results.validate(req.body);
-    if (result.error) {
-        res.render("competitions/results/", { result: { validation_error: true, display_form: true } });
-        return;
-    }
-
-    const stmt = db.prepare("UPDATE application SET points = ? WHERE id = ?;");
-    const updateResult = stmt.run(req.body.name, req.body.description, req.body.apply_till, req.body.id);
-
-    if (updateResult.changes && updateResult.changes === 1) {
-        res.redirect("/results");
-    } else {
-        res.render("competitions/results/", { result: { database_error: true } });
-    }
-});
-
-//GET competitions/application
-router.get("/application/:id", function (req, res, next) {
-    //do validation
-    const result = schema_id.validate(req.params);
-    if (result.error) {
-        throw new Error("Neispravan poziv");
-    }
-
-    // user check
-
-    const checkStmt1 = db.prepare(`
-    SELECT count(*) FROM application WHERE id_user = ? AND id_competition = ?;
-    `);
-    const checkResult1 = checkStmt1.get(req.user.sub, req.params.id);
-
-    console.log(checkResult1);
-
-    if (checkResult1["count(*)"] >= 1) {
-        res.render("competitions/form", {
-            result: { database_error: true }
-        });
-    }
-
-    else {
-
-        // database write
-
-        const stmt = db.prepare("INSERT INTO application (id_user, id_competition) VALUES (?, ?);");
-        const updateResult = stmt.run(req.user.sub, req.params.id);
-
-        if (updateResult.changes && updateResult.changes === 1) {
-            res.render("competitions/application", {
-                result: { items: result }
-            })
-        }
-        else {
-            res.render("competitions/form", {
-                result: { dataase_error: true }
-            })
-        }
-    }
-
-});
-
-// GET /competitions
-router.get("/", authRequired, function (req, res, next) {
-    const stmt = db.prepare(`
-        SELECT c.id, c.name, c.description, u.name AS author, c.apply_till
-        FROM competitions c, users u
-        WHERE c.author_id = u.id
-        ORDER BY c.apply_till
-    `);
-    const result = stmt.all();
-
-    res.render("competitions/index", { result: { items: result } });
-});
-
-// SCHEMA signup
-const schema_id = Joi.object({
-    id: Joi.number().integer().positive().required()
-});
-
 // GET /competitions/delete/:id
 router.get("/delete/:id", adminRequired, function (req, res, next) {
     // do validation
@@ -138,11 +50,26 @@ router.get("/delete/:id", adminRequired, function (req, res, next) {
         throw new Error("Neispravan poziv");
     }
 
-    const stmt = db.prepare("DELETE FROM competitions WHERE id = ?;");
-    const deleteResult = stmt.run(req.params.id);
+    // ZADATAK 3
 
-    if (!deleteResult.changes || deleteResult.changes !== 1) {
-        throw new Error("Operacija nije uspjela");
+    const checkStmt1 = db.prepare("SELECT count(*) FROM application WHERE id_competition = ?");
+    const checkResult1 = checkStmt1.get(req.params.id);
+
+    if (checkResult1["count(*)"] >= 1) {
+        const stmt1 = db.prepare("DELETE FROM application WHERE id_competition = ?;");
+        const deleteResult1 = stmt1.run(req.params.id);
+
+        const stmt2 = db.prepare("DELETE FROM competitions WHERE id = ?;");
+        const deleteResult2 = stmt2.run(req.params.id);
+    }
+
+    else {
+        const stmt = db.prepare("DELETE FROM competitions WHERE id = ?;");
+        const deleteResult = stmt.run(req.params.id);
+
+        if (!deleteResult.changes || deleteResult.changes !== 1) {
+            throw new Error("Operacija nije uspjela");
+        }
     }
 
     res.redirect("/competitions");
@@ -222,6 +149,154 @@ router.post("/add", adminRequired, function (req, res, next) {
     } else {
         res.render("competitions/form", { result: { database_error: true } });
     }
+});
+
+//GET competitions/application
+router.get("/application/:id", function (req, res, next) {
+    //do validation
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    // user check
+
+    const checkStmt1 = db.prepare(`
+    SELECT count(*) FROM application WHERE id_user = ? AND id_competition = ?;
+    `);
+    const checkResult1 = checkStmt1.get(req.user.sub, req.params.id);
+
+    console.log(checkResult1);
+
+    if (checkResult1["count(*)"] >= 1) {
+        res.render("competitions/form", {
+            result: { database_error: true }
+        });
+    }
+
+    else {
+
+        // database write
+
+        const stmt = db.prepare("INSERT INTO application (id_user, id_competition) VALUES (?, ?);");
+        const updateResult = stmt.run(req.user.sub, req.params.id);
+
+        if (updateResult.changes && updateResult.changes === 1) {
+            res.render("competitions/application", {
+                result: { items: result }
+            })
+        }
+        else {
+            res.render("competitions/form", {
+                result: { dataase_error: true }
+            })
+        }
+    }
+
+});
+
+// ZADATAK 1
+
+// GET /competitions/results/:id
+router.get("/results/:id", function (req, res, next) {
+
+    // do validation
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    // PROVJERA JE LI KORISNIK UPISAN
+
+    const checkStmt1 = db.prepare("SELECT count(*) FROM application WHERE id_user = ? AND id_competition = ?;");
+    const checkResult1 = checkStmt1.get(req.user.sub, req.params.id);
+
+    if (checkResult1["count(*)"] >= 1) {
+        res.render("competitions/form", { result: { database_error: true } });
+    }
+    else {
+
+        // UPIS U BAZU
+
+        const stmt = db.prepare("INSERT INTO application (id_user, id_competition) VALUES (?, ?);");
+        const updateResult = stmt.run(req.user.sub, req.params.id);
+
+        if (updateResult.changes && updateResult.changes === 1) {
+            res.render("competitions/form", { result: { success: true } });
+        } else {
+            res.render("competitions/form", { result: { database_error: true } });
+        }
+    }
+});
+
+// ZADATAK 2
+
+// GET /competitions/results/:id
+
+router.get("/results/:id", adminRequired, function (req, res, next) {
+
+    const stmt = db.prepare(`
+        SELECT c.name AS CompName, u.name AS Competitor, l.id AS id_application, l.id_user, l.points
+        FROM competitions c, users u, application l
+        WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?;
+    `);
+
+    const result = stmt.all(req.params.id);
+
+    res.render("competitions/results", { result: { items: result } });
+});
+
+// SCHEMA points
+const schema_points = Joi.object({
+    id: Joi.number().integer().positive().required(),
+    points: Joi.number().min(1).max(50).required()
+});
+
+// POST /competitions/points_change/
+router.post("/points_change", authRequired, function (req, res, next) {
+    // do validation
+    const result = schema_points.validate(req.body);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+        return;
+    }
+
+    const stmt = db.prepare("UPDATE application SET points = ? WHERE points = ?;");
+    const updateResult = stmt.run(req.body.points, req.body.id);
+
+    if (updateResult.changes && updateResult.changes === 1) {
+        res.render("competitions/form", { result: { points_success: true } });
+    } else {
+        res.render("competitions/form", { result: { database_error: true } });
+    }
+});
+
+// ZADATAK 4
+
+// GET /competitions/leaderboard/:id
+
+router.get("/leaderboard/:id", function (req, res, next) {
+
+    const stmt = db.prepare(`
+        SELECT u.name AS natjecatelj, l.points, l.id_user
+        FROM competitions c, users u, application l
+        WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?
+        ORDER BY l.points DESC;
+    `);
+
+    const result = stmt.all(req.params.id);
+
+    console.log(result);
+
+    const stmt1 = db.prepare(`
+        SELECT name AS natjecanje, apply_till AS datum
+        FROM competitions
+        WHERE id = ?
+    `);
+
+    const data = stmt1.all(req.params.id);
+
+    res.render("competitions/leaderboard", { layout:'noheader' ,result: { items: result, data}, data: { items: data}});
 });
 
 module.exports = router;

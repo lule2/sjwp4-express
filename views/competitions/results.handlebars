@@ -21,13 +21,14 @@
                     <td>{{this.id_competition}}</td>
                     <td>{{this.points}}</td>
                     <td>
-                        <form method="post" action="/competitions/results" class="flex flex-col gap-2">
+                        <form method="post" action="/competitions/points_change" class="flex flex-col gap-2">
                             <div class="flex flex-col">
                                 <label>Bodovi</label>
                                 <input id="points" type="number" name="points" value="{{this.points}}" class="bg-neutral"/>
                                 <input type="hidden" name="id" value="{{this.id_application}}"/>
                                 {{> form_buttons }}
                             </div>
+                        </form>
                     </td>
                 </tr>
                 {{/each}}
