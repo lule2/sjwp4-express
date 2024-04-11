@@ -23,25 +23,6 @@ const schema_id = Joi.object({
     id: Joi.number().integer().positive().required()
 });
 
-//GET competitions/results
-router.get("/results/:id", function (req, res, next) {
-    //do validation
-    const result = schema_id.validate(req.params);
-    if (result.error) {
-        throw new Error("Neispravan poziv");
-    }
-    else {
-        const stmt = db.prepare(`
-        SELECT c.id_application, c.id_user, c.points
-        FROM application c, users u
-        ORDER BY c.points
-    `);
-        const result = stmt.all();
-
-        res.render("competitions/results", { result: { items: result } });
-    }
-});
-
 // GET /competitions/delete/:id
 router.get("/delete/:id", adminRequired, function (req, res, next) {
     // do validation
@@ -52,11 +33,11 @@ router.get("/delete/:id", adminRequired, function (req, res, next) {
 
     // ZADATAK 3
 
-    const checkStmt1 = db.prepare("SELECT count(*) FROM application WHERE id_competition = ?");
+    const checkStmt1 = db.prepare("SELECT count(*) FROM login WHERE id_competition = ?");
     const checkResult1 = checkStmt1.get(req.params.id);
 
     if (checkResult1["count(*)"] >= 1) {
-        const stmt1 = db.prepare("DELETE FROM application WHERE id_competition = ?;");
+        const stmt1 = db.prepare("DELETE FROM login WHERE id_competition = ?;");
         const deleteResult1 = stmt1.run(req.params.id);
 
         const stmt2 = db.prepare("DELETE FROM competitions WHERE id = ?;");
@@ -151,54 +132,10 @@ router.post("/add", adminRequired, function (req, res, next) {
     }
 });
 
-//GET competitions/application
-router.get("/application/:id", function (req, res, next) {
-    //do validation
-    const result = schema_id.validate(req.params);
-    if (result.error) {
-        throw new Error("Neispravan poziv");
-    }
-
-    // user check
-
-    const checkStmt1 = db.prepare(`
-    SELECT count(*) FROM application WHERE id_user = ? AND id_competition = ?;
-    `);
-    const checkResult1 = checkStmt1.get(req.user.sub, req.params.id);
-
-    console.log(checkResult1);
-
-    if (checkResult1["count(*)"] >= 1) {
-        res.render("competitions/form", {
-            result: { database_error: true }
-        });
-    }
-
-    else {
-
-        // database write
-
-        const stmt = db.prepare("INSERT INTO application (id_user, id_competition) VALUES (?, ?);");
-        const updateResult = stmt.run(req.user.sub, req.params.id);
-
-        if (updateResult.changes && updateResult.changes === 1) {
-            res.render("competitions/application", {
-                result: { items: result }
-            })
-        }
-        else {
-            res.render("competitions/form", {
-                result: { dataase_error: true }
-            })
-        }
-    }
-
-});
-
 // ZADATAK 1
 
-// GET /competitions/results/:id
-router.get("/results/:id", function (req, res, next) {
+// GET /competitions/login/:id
+router.get("/login/:id", function (req, res, next) {
 
     // do validation
     const result = schema_id.validate(req.params);
@@ -208,7 +145,7 @@ router.get("/results/:id", function (req, res, next) {
 
     // PROVJERA JE LI KORISNIK UPISAN
 
-    const checkStmt1 = db.prepare("SELECT count(*) FROM application WHERE id_user = ? AND id_competition = ?;");
+    const checkStmt1 = db.prepare("SELECT count(*) FROM login WHERE id_user = ? AND id_competition = ?;");
     const checkResult1 = checkStmt1.get(req.user.sub, req.params.id);
 
     if (checkResult1["count(*)"] >= 1) {
@@ -218,7 +155,7 @@ router.get("/results/:id", function (req, res, next) {
 
         // UPIS U BAZU
 
-        const stmt = db.prepare("INSERT INTO application (id_user, id_competition) VALUES (?, ?);");
+        const stmt = db.prepare("INSERT INTO login (id_user, id_competition) VALUES (?, ?);");
         const updateResult = stmt.run(req.user.sub, req.params.id);
 
         if (updateResult.changes && updateResult.changes === 1) {
@@ -231,41 +168,41 @@ router.get("/results/:id", function (req, res, next) {
 
 // ZADATAK 2
 
-// GET /competitions/results/:id
+// GET /competitions/score_input/:id
 
-router.get("/results/:id", adminRequired, function (req, res, next) {
+router.get("/score_input/:id", adminRequired, function (req, res, next) {
 
     const stmt = db.prepare(`
-        SELECT c.name AS CompName, u.name AS Competitor, l.id AS id_application, l.id_user, l.points
-        FROM competitions c, users u, application l
+        SELECT c.name AS CompName, u.name AS Competitor, l.id AS login_id, l.id_user, l.score
+        FROM competitions c, users u, login l
         WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?;
     `);
 
     const result = stmt.all(req.params.id);
 
-    res.render("competitions/results", { result: { items: result } });
+    res.render("competitions/score_input", { result: { items: result } });
 });
 
-// SCHEMA points
-const schema_points = Joi.object({
+// SCHEMA score
+const schema_score = Joi.object({
     id: Joi.number().integer().positive().required(),
-    points: Joi.number().min(1).max(50).required()
+    score: Joi.number().min(1).max(50).required()
 });
 
-// POST /competitions/points_change/
-router.post("/points_change", authRequired, function (req, res, next) {
+// POST /competitions/score_change/
+router.post("/score_change", authRequired, function (req, res, next) {
     // do validation
-    const result = schema_points.validate(req.body);
+    const result = schema_score.validate(req.body);
     if (result.error) {
         throw new Error("Neispravan poziv");
         return;
     }
 
-    const stmt = db.prepare("UPDATE application SET points = ? WHERE points = ?;");
-    const updateResult = stmt.run(req.body.points, req.body.id);
+    const stmt = db.prepare("UPDATE login SET score = ? WHERE id = ?;");
+    const updateResult = stmt.run(req.body.score, req.body.id);
 
     if (updateResult.changes && updateResult.changes === 1) {
-        res.render("competitions/form", { result: { points_success: true } });
+        res.render("competitions/form", { result: { score_success: true } });
     } else {
         res.render("competitions/form", { result: { database_error: true } });
     }
@@ -278,10 +215,10 @@ router.post("/points_change", authRequired, function (req, res, next) {
 router.get("/leaderboard/:id", function (req, res, next) {
 
     const stmt = db.prepare(`
-        SELECT u.name AS natjecatelj, l.points, l.id_user
-        FROM competitions c, users u, application l
+        SELECT u.name AS natjecatelj, l.score, l.id_user
+        FROM competitions c, users u, login l
         WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?
-        ORDER BY l.points DESC;
+        ORDER BY l.score DESC;
     `);
 
     const result = stmt.all(req.params.id);
@@ -298,5 +235,34 @@ router.get("/leaderboard/:id", function (req, res, next) {
 
     res.render("competitions/leaderboard", { layout:'noheader' ,result: { items: result, data}, data: { items: data}});
 });
+
+//ZADATAK 5
+
+// GET /competitions/graph/:id
+
+router.get("/leaderboard/graph/:id", function (req, res, next) {
+
+    const stmt = db.prepare(`
+        SELECT u.name AS natjecatelj, l.score, l.id_user
+        FROM competitions c, users u, login l
+        WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?
+        ORDER BY l.score DESC;
+    `);
+
+    const result = stmt.all(req.params.id);
+
+    console.log(result);
+
+    const stmt1 = db.prepare(`
+        SELECT name AS natjecanje, apply_till AS datum
+        FROM competitions
+        WHERE id = ?
+    `);
+
+    const data = stmt1.all(req.params.id);
+
+    res.render("competitions/leaderboard/graph", { result: { items: result } });
+});
+
 
 module.exports = router;

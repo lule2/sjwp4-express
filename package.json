@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "start": "node -r dotenv/config ./bin/www",
-    "dev": "npx nodemon -r dotenv/config ./bin/www",
-    "tw": "npx tailwindcss -i ./public/stylesheets/input.css -o ./public/stylesheets/style.css --watch"
+    "dev": "npx nodemon -r dotenv/config ./bin/www , parcel build src/index.html", 
+    "tw": "npx tailwindcss -i ./public/stylesheets/input.css -o ./public/stylesheets/style.css --watch",
+    "build": "parcel build src/index.html"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^9.2.2",
+    "chart.js": "^4.4.2",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "dotenv": "^16.3.1",
@@ -18,12 +20,14 @@
     "http-errors": "~1.6.3",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "@cubejs-client/core": "^0.31.0"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.7",
     "daisyui": "^4.4.4",
     "nodemon": "^3.0.1",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.3.5",
+    "parcel": "^2.6.2"
   }
 }
