@@ -1,12 +1,48 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-  </head>
-  <body>
-    <!-- <div style="width: 500px;"><canvas id="dimensions"></canvas></div><br/> -->
-    <div style="width: 800px;"><canvas id="acquisitions"></canvas></div>
 
-    <!-- <script type="module" src="dimensions.js"></script> -->
-    <script type="module" src="acquisitions.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chart.js Example</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <canvas id="myChart"></canvas>
+  <script>
+    fetch('/data')
+      .then(response => response.json())
+      .then(data => {
+        // Process the fetched data and format it for Chart.js
+        const labels = data.map(item => item.label);
+        const values = data.map(item => item.value);
+
+        // Create the chart
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Data from SQLite',
+              data: values,
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      })
+      .catch(error => console.error('Error fetching data:', error));
+  </script>
+</body>
+
 </html>

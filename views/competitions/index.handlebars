@@ -2,6 +2,7 @@
     {{#if user.is_admin }}
     <a href="/competitions/add" class="btn btn-primary">Novo natjecanje</a>
     {{/if}}
+    <a href="/competitions/leaderboard/graph" class="btn btn-primary">Statistika</a>
 
     <div class="overflow-x-auto">
         <table class="table">
@@ -38,7 +39,7 @@
                         {{/if}}
                         <a href="/competitions/login/{{this.id}}" class="btn btn-accent btn-xs">Prijava</a>
                         <a href="/competitions/score_input/{{this.id}}" class="btn btn-accent btn-xs">Rezultati</a>
-                        <a href="/competitions/leaderboard/{{this.id}}" class="btn btn-accent btn-xs">Ljestivica</a>
+                        <a href="/competitions/leaderboard/show/{{this.id}}" class="btn btn-accent btn-xs">Ljestivica</a>
                     </td>
                 </tr>
                 {{/each}}

@@ -212,7 +212,7 @@ router.post("/score_change", authRequired, function (req, res, next) {
 
 // GET /competitions/leaderboard/:id
 
-router.get("/leaderboard/:id", function (req, res, next) {
+router.get("/leaderboard/show/:id", function (req, res, next) {
 
     const stmt = db.prepare(`
         SELECT u.name AS natjecatelj, l.score, l.id_user
@@ -233,36 +233,24 @@ router.get("/leaderboard/:id", function (req, res, next) {
 
     const data = stmt1.all(req.params.id);
 
-    res.render("competitions/leaderboard", { layout:'noheader' ,result: { items: result, data}, data: { items: data}});
+    res.render("competitions/leaderboard", { layout: 'header', result: { items: result, data }, data: { items: data } });
 });
 
 //ZADATAK 5
 
-// GET /competitions/graph/:id
+// GET /competitions/leaderboard/graph/:id
 
-router.get("/leaderboard/graph/:id", function (req, res, next) {
-
+router.get("/leaderboard/graph", authRequired, function (req, res, next) {
     const stmt = db.prepare(`
-        SELECT u.name AS natjecatelj, l.score, l.id_user
-        FROM competitions c, users u, login l
-        WHERE l.id_user = u.id AND l.id_competition = c.id AND l.id_competition = ?
-        ORDER BY l.score DESC;
+        SELECT c.id_user, c.name, c.id_competition, u.name, c.score
+        FROM competitions c, users u, login c
     `);
 
-    const result = stmt.all(req.params.id);
+    const result = stmt.all();
 
-    console.log(result);
-
-    const stmt1 = db.prepare(`
-        SELECT name AS natjecanje, apply_till AS datum
-        FROM competitions
-        WHERE id = ?
-    `);
-
-    const data = stmt1.all(req.params.id);
-
-    res.render("competitions/leaderboard/graph", { result: { items: result } });
+    res.render("competitions/graph", { layout: "main", result: { items: result } });
 });
+
 
 
 module.exports = router;
