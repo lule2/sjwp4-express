@@ -241,16 +241,59 @@ router.get("/leaderboard/show/:id", function (req, res, next) {
 // GET /competitions/leaderboard/graph/:id
 
 router.get("/leaderboard/graph", authRequired, function (req, res, next) {
+    res.render("competitions/graph", { layout: "main" });
+});
+
+router.get("/leaderboard/graph_data", authRequired, function (req, res, next) {
     const stmt = db.prepare(`
-        SELECT c.id_user, c.name, c.id_competition, u.name, c.score
-        FROM competitions c, users u, login c
+        SELECT c.id, c.name, c.apply_till
+        FROM competitions c
     `);
 
     const result = stmt.all();
 
-    res.render("competitions/graph", { layout: "main", result: { items: result } });
+    res.send({ result: { items: result } });
 });
 
+//DODATNI ZADATAK
 
+const schema_forumFeedback = Joi.object({
+    id_competition: Joi.number().required(),
+    feedback:Joi.string().min(3).max(1000).required()
+});
+
+router.get("/forum/:id", authRequired, function(req, res, next){
+    //do validation
+    const result = schema_id.validate(req.params);
+    if (result.error){
+        throw new Error("Neispravan poziv");
+    }
+
+    res.render("competitions/forum", { result: { competition: req.params.id}} );
+});
+
+router.post("/forum", authRequired, function (req, res, next ){
+    const result = schema_forumFeedback.validate(req.body);
+    const stmt = db.prepare("INSERT INTO forum (id_user, id_competition, feedback) VALUES (?, ?, ?);");
+    const insertResult = stmt.run(req.user.sub, req.body.id_competition, req.body.feedback);
+
+    console.log(insertResult);
+    res.render("competitions/forum_ok", { result: { id: req.body.id_competition }});
+});
+
+// Ispisivanje poruka na forumu
+router.get("/forum_output/:id", authRequired, function (req, res, next) {
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+    const stmt = db.prepare(`
+    SELECT f.feedback, u.id, u.name
+    FROM forum f, competitions c, users u
+    WHERE f.id_user = u.id AND c.id = f.id_competition AND c.id = ?
+    `)
+    const outputResult = stmt.all(req.params.id);
+    res.render("competitions/forum_output", { result: { items: outputResult } });
+});
 
 module.exports = router;
